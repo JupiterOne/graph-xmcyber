@@ -11,9 +11,9 @@ export const entitySpec: StepSpec<IntegrationConfig>[] = [
     name: 'Fetch Entities',
     entities: [
       {
-        resourceName: 'Entities',
-        _type: 'xmcyber_entities',
-        _class: ['Record'],
+        resourceName: 'Entity',
+        _type: 'xmcyber_entity',
+        _class: ['Entity'],
       },
     ],
     relationships: [],

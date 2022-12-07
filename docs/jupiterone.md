@@ -95,9 +95,9 @@ https://github.com/JupiterOne/sdk/blob/main/docs/integrations/development.md
 
 The following entities are created:
 
-| Resources | Entity `_type`     | Entity `_class` |
-| --------- | ------------------ | --------------- |
-| Entities  | `xmcyber_entities` | `Record`        |
+| Resources | Entity `_type`   | Entity `_class` |
+| --------- | ---------------- | --------------- |
+| Entity    | `xmcyber_entity` | `Entity`        |
 
 <!--
 ********************************************************************************

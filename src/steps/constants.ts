@@ -6,8 +6,8 @@ export const Steps = {
 
 export const Entities: Record<'ENTITY', StepEntityMetadata> = {
   ENTITY: {
-    resourceName: 'Entities',
-    _type: 'xmcyber_entities',
-    _class: ['Record'],
+    resourceName: 'Entity',
+    _type: 'xmcyber_entity',
+    _class: ['Entity'],
   },
 };

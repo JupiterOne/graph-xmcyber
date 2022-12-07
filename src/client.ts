@@ -20,7 +20,7 @@ export interface XMCyberResponse<T> extends NodeFetchResponse {
 /**
  * default: 100, max: 1000
  */
-const ITEMS_PER_PAGE = 100;
+const ITEMS_PER_PAGE = 1000;
 
 /**
  * An APIClient maintains authentication state and provides an interface to
@@ -47,6 +47,7 @@ export class APIClient {
     };
   }
 
+  // TODO: Missing API Rate limit
   public async iterateEntities(iteratee: ResourceIteratee<XMCyberEntity>) {
     const entitiestPath = '/systemReport/entities';
     // const entitiestPath = '/entityInventory/entities';

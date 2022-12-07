@@ -1,11 +1,26 @@
-import http from 'http';
+import fetch, { RequestInit, Response as NodeFetchResponse } from 'node-fetch';
+import { URLSearchParams } from 'url';
 
-import { IntegrationProviderAuthenticationError } from '@jupiterone/integration-sdk-core';
+import {
+  IntegrationError,
+  IntegrationLogger,
+  IntegrationProviderAPIError,
+  IntegrationProviderAuthenticationError,
+  IntegrationProviderAuthorizationError,
+} from '@jupiterone/integration-sdk-core';
 
 import { IntegrationConfig } from './config';
-import { AcmeUser, AcmeGroup } from './types';
+import { Method, XMCyberEntity } from './types';
 
 export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
+export interface XMCyberResponse<T> extends NodeFetchResponse {
+  json(): Promise<T>;
+}
+
+/**
+ * default: 100, max: 1000
+ */
+const ITEMS_PER_PAGE = 100;
 
 /**
  * An APIClient maintains authentication state and provides an interface to
@@ -16,109 +31,125 @@ export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
  * resources.
  */
 export class APIClient {
-  constructor(readonly config: IntegrationConfig) {}
+  private readonly headers: RequestInit['headers'];
+  private BASE_URL = 'https://cyberrange.clients.xmcyber.com/api';
+
+  // TODO: Use logger and use config
+  constructor(
+    readonly config: IntegrationConfig,
+    readonly logger: IntegrationLogger,
+  ) {
+    const { apiKey } = config;
+    this.headers = {
+      'Content-type': 'application/json',
+      Accept: 'application/json',
+      'X-Api-Key': apiKey,
+    };
+  }
+
+  public async iterateEntities(iteratee: ResourceIteratee<XMCyberEntity>) {
+    const entitiestPath = '/systemReport/entities';
+    // const entitiestPath = '/entityInventory/entities';
+
+    let page = 1;
+
+    do {
+      const searchParams = new URLSearchParams({
+        page: String(page),
+        pageSize: String(ITEMS_PER_PAGE),
+        // TODO: Add this filter and read from config.
+        // 'entityTypeIds[]': 'agent',
+      });
+      const endpoint = `${entitiestPath}?${searchParams.toString()}`;
+
+      const response = await this.request<any>(
+        // TODO: Add filter type entityId = agent
+        endpoint,
+        Method.GET,
+      );
+      const result = await response.json();
+
+      const totalPages = result.paging.totalPages;
+      const currentPage = Number(result.paging.page);
+
+      if (Array.isArray(result.data)) {
+        for (const resource of result.data) {
+          await iteratee(resource);
+        }
+      } else {
+        throw new IntegrationError({
+          code: 'UNEXPECTED_RESPONSE_DATA',
+          message: `Expected a collection of resources but type was ${typeof result}`,
+        });
+      }
+
+      page = totalPages > currentPage ? currentPage + 1 : 0; // 0 stops pagination
+    } while (page);
+  }
 
   public async verifyAuthentication(): Promise<void> {
-    // TODO make the most light-weight request possible to validate
-    // authentication works with the provided credentials, throw an err if
-    // authentication fails
-    const request = new Promise<void>((resolve, reject) => {
-      http.get(
-        {
-          hostname: 'localhost',
-          port: 443,
-          path: '/api/v1/some/endpoint?limit=1',
-          agent: false,
-          timeout: 10,
-        },
-        (res) => {
-          if (res.statusCode !== 200) {
-            reject(new Error('Provider authentication failed'));
-          } else {
-            resolve();
-          }
-        },
-      );
-    });
-
+    // This endpoint will throw 401 when the request lacks valid authentication credentials
+    const endpoint = '/status/systemHealth';
     try {
-      await request;
+      const response = await this.request<void>(endpoint, Method.GET);
+      if (!response.ok) {
+        throw new Error('Provider authentication failed');
+      }
     } catch (err) {
       throw new IntegrationProviderAuthenticationError({
         cause: err,
-        endpoint: 'https://localhost/api/v1/some/endpoint?limit=1',
+        endpoint: this.BASE_URL + endpoint,
         status: err.status,
         statusText: err.statusText,
       });
     }
   }
 
-  /**
-   * Iterates each user resource in the provider.
-   *
-   * @param iteratee receives each resource to produce entities/relationships
-   */
-  public async iterateUsers(
-    iteratee: ResourceIteratee<AcmeUser>,
-  ): Promise<void> {
-    // TODO paginate an endpoint, invoke the iteratee with each record in the
-    // page
-    //
-    // The provider API will hopefully support pagination. Functions like this
-    // should maintain pagination state, and for each page, for each record in
-    // the page, invoke the `ResourceIteratee`. This will encourage a pattern
-    // where each resource is processed and dropped from memory.
-
-    const users: AcmeUser[] = [
-      {
-        id: 'acme-user-1',
-        name: 'User One',
-      },
-      {
-        id: 'acme-user-2',
-        name: 'User Two',
-      },
-    ];
-
-    for (const user of users) {
-      await iteratee(user);
+  private async request<T>(
+    endpoint: string,
+    method: Method,
+    body?: {},
+  ): Promise<XMCyberResponse<T>> {
+    const requestOptions: RequestInit = {
+      method,
+      headers: this.headers,
+    };
+    if (body) {
+      requestOptions.body = JSON.stringify(body);
     }
-  }
 
-  /**
-   * Iterates each group resource in the provider.
-   *
-   * @param iteratee receives each resource to produce entities/relationships
-   */
-  public async iterateGroups(
-    iteratee: ResourceIteratee<AcmeGroup>,
-  ): Promise<void> {
-    // TODO paginate an endpoint, invoke the iteratee with each record in the
-    // page
-    //
-    // The provider API will hopefully support pagination. Functions like this
-    // should maintain pagination state, and for each page, for each record in
-    // the page, invoke the `ResourceIteratee`. This will encourage a pattern
-    // where each resource is processed and dropped from memory.
+    const response: XMCyberResponse<T> = (await fetch(
+      this.BASE_URL + endpoint,
+      requestOptions,
+    )) as XMCyberResponse<T>;
 
-    const groups: AcmeGroup[] = [
-      {
-        id: 'acme-group-1',
-        name: 'Group One',
-        users: [
-          {
-            id: 'acme-user-1',
-          },
-        ],
-      },
-    ];
-
-    for (const group of groups) {
-      await iteratee(group);
+    if (response.status === 401) {
+      throw new IntegrationProviderAuthenticationError({
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    } else if (response.status === 403) {
+      throw new IntegrationProviderAuthorizationError({
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+      });
+    } else if (!response.ok) {
+      throw new IntegrationProviderAPIError({
+        endpoint,
+        status: response.status,
+        statusText: response.statusText,
+      });
     }
+
+    return response;
   }
 }
 
-export function createAPIClient(config: IntegrationConfig): APIClient {
-  return new APIClient(config);
+export function createAPIClient(
+  config: IntegrationConfig,
+  logger: IntegrationLogger,
+): APIClient {
+  return new APIClient(config, logger);
 }

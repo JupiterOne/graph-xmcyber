@@ -21,10 +21,7 @@ import { createAPIClient } from './client';
  * `instance.config` in a UI.
  */
 export const instanceConfigFields: IntegrationInstanceConfigFieldMap = {
-  clientId: {
-    type: 'string',
-  },
-  clientSecret: {
+  apiKey: {
     type: 'string',
     mask: true,
   },
@@ -36,27 +33,24 @@ export const instanceConfigFields: IntegrationInstanceConfigFieldMap = {
  */
 export interface IntegrationConfig extends IntegrationInstanceConfig {
   /**
-   * The provider API client ID used to authenticate requests.
+   * The API Key to be used when authenticating with the XM-Cyber API
    */
-  clientId: string;
-
-  /**
-   * The provider API client secret used to authenticate requests.
-   */
-  clientSecret: string;
+  apiKey: string;
 }
 
-export async function validateInvocation(
-  context: IntegrationExecutionContext<IntegrationConfig>,
-) {
-  const { config } = context.instance;
+export async function validateInvocation({
+  instance,
+  logger,
+}: IntegrationExecutionContext<IntegrationConfig>) {
+  const { config } = instance;
 
-  if (!config.clientId || !config.clientSecret) {
-    throw new IntegrationValidationError(
-      'Config requires all of {clientId, clientSecret}',
-    );
+  if (!config.apiKey) {
+    throw new IntegrationValidationError('Config requires {apiKey}');
   }
 
-  const apiClient = createAPIClient(config);
-  await apiClient.verifyAuthentication();
+  const apiClient = createAPIClient(config, logger);
+  logger.info('before result');
+  const result = await apiClient.verifyAuthentication();
+  logger.info({ result }, 'after result');
+  return;
 }

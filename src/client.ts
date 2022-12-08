@@ -74,8 +74,8 @@ export class XMCyberClient {
 
   public async fetchEntities(page: number, pageSize: number) {
     const searchParams = new URLSearchParams({
-      page: String(page),
-      pageSize: String(ITEMS_PER_PAGE),
+      page: page.toString(),
+      pageSize: ITEMS_PER_PAGE.toString(),
     });
     const endpoint = `/systemReport/entities?${searchParams.toString()}`;
 

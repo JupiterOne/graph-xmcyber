@@ -1,6 +1,7 @@
 import {
   createIntegrationEntity,
   Entity,
+  parseTimePropertyValue,
 } from '@jupiterone/integration-sdk-core';
 import { XMCyberEntity } from '../../types';
 
@@ -20,12 +21,12 @@ export function createEntityEntity(entity: XMCyberEntity): Entity {
         affectedUniqueEntitiesCount: entity.affectedUniqueEntities.count.value,
         agentId: entity.agentId,
         asset: !!entity.asset,
-        assetAt: entity.assetAt,
+        assetOn: parseTimePropertyValue(entity.assetAt),
         color: entity.color,
         compromised: entity.compromised,
         compromisedRateTotal: entity.compromisedRate?.total,
         discovered: entity.discovered,
-        discoveredAt: entity.discoveredAt,
+        discoveredOn: parseTimePropertyValue(entity.discoveredAt),
         displayName: entity.displayName,
         entityId: entity.entityId,
         entityType: entity.entityType,
@@ -44,7 +45,7 @@ export function createEntityEntity(entity: XMCyberEntity): Entity {
         osDistributionVersion: entity.os?.distributionVersion,
         osName: entity.os?.name,
         startingPoint: entity.startingPoint,
-        startingPointAt: entity.startingPointAt,
+        startingPointOn: parseTimePropertyValue(entity.startingPointAt),
         labels: JSON.stringify(entity.labels),
         tags: JSON.stringify(entity.tags),
       },

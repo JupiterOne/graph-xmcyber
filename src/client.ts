@@ -10,7 +10,7 @@ import {
 } from '@jupiterone/integration-sdk-core';
 
 import { IntegrationConfig } from './config';
-import { Method, XMCyberEntity } from './types';
+import { Method, XMCyberEntitiesResponse, XMCyberEntity } from './types';
 
 export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
 export interface XMCyberResponse<T> extends NodeFetchResponse {
@@ -34,7 +34,6 @@ export class APIClient {
   private readonly headers: RequestInit['headers'];
   private BASE_URL = 'https://cyberrange.clients.xmcyber.com/api';
 
-  // TODO: Use logger and use config
   constructor(
     readonly config: IntegrationConfig,
     readonly logger: IntegrationLogger,
@@ -47,27 +46,12 @@ export class APIClient {
     };
   }
 
-  // TODO: Missing API Rate limit
+  // TODO: Missing to define and implement API Rate limit
   public async iterateEntities(iteratee: ResourceIteratee<XMCyberEntity>) {
-    const entitiestPath = '/systemReport/entities';
-    // const entitiestPath = '/entityInventory/entities';
-
     let page = 1;
 
     do {
-      const searchParams = new URLSearchParams({
-        page: String(page),
-        pageSize: String(ITEMS_PER_PAGE),
-        // TODO: Add this filter and read from config.
-        // 'entityTypeIds[]': 'agent',
-      });
-      const endpoint = `${entitiestPath}?${searchParams.toString()}`;
-
-      const response = await this.request<any>(
-        // TODO: Add filter type entityId = agent
-        endpoint,
-        Method.GET,
-      );
+      const response = await this.fetchEntities(page, ITEMS_PER_PAGE);
       const result = await response.json();
 
       const totalPages = result.paging.totalPages;
@@ -86,6 +70,19 @@ export class APIClient {
 
       page = totalPages > currentPage ? currentPage + 1 : 0; // 0 stops pagination
     } while (page);
+  }
+
+  public async fetchEntities(page: number, pageSize: number) {
+    const entitiesPath = '/systemReport/entities';
+    const searchParams = new URLSearchParams({
+      page: String(page),
+      pageSize: String(ITEMS_PER_PAGE),
+      // TODO: Missing to define this filter.
+      // 'entityTypeIds[]': 'agent',
+    });
+    const endpoint = `${entitiesPath}?${searchParams.toString()}`;
+
+    return this.request<XMCyberEntitiesResponse>(endpoint, Method.GET);
   }
 
   public async verifyAuthentication(): Promise<void> {

@@ -5,27 +5,29 @@ export interface XMCyberEntitiesResponse {
 
 export interface XMCyberEntity {
   _id: string;
+  affectedAssets: AffectedAssets;
+  affectedEntities: AffectedEntities;
+  affectedUniqueAssets: AffectedUniqueAssets;
+  affectedUniqueEntities: AffectedUniqueEntities;
+  agentId?: string;
+  asset?: boolean;
+  assetAt?: string;
+  attackComplexity: AttackComplexity;
+  attackedByTechniques: AttackedByTechnique[];
+  color: string;
+  compromised: boolean;
+  compromisedRate: CompromisedRate;
+  discovered?: boolean;
+  discoveredAt?: string;
+  displayName: string;
   entityId: string;
   entityType: string;
   name: string;
-  color: string;
-  discovered?: boolean;
-  discoveredAt?: string;
-  compromised: boolean;
-  compromisedRate: CompromisedRate;
+  os?: Os;
   startingPoint?: boolean;
   startingPointAt?: string;
-  asset?: boolean;
-  assetAt?: string;
-  attackedByTechniques: AttackedByTechnique[];
-  affectedEntities: AffectedEntities;
-  affectedAssets: AffectedAssets;
-  affectedUniqueAssets: AffectedUniqueAssets;
-  affectedUniqueEntities: AffectedUniqueEntities;
-  displayName: string;
-  attackComplexity: AttackComplexity;
   tags?: Tag[];
-  os?: Os;
+  labels?: Label[];
 }
 
 export interface AttackedByTechnique {
@@ -131,6 +133,10 @@ export interface Version {
   major: number;
   minor: number;
   patch: number;
+}
+
+export interface Label {
+  label: string;
 }
 
 export enum Method {

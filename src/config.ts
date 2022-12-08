@@ -49,8 +49,5 @@ export async function validateInvocation({
   }
 
   const apiClient = createAPIClient(config, logger);
-  logger.info('before result');
-  const result = await apiClient.verifyAuthentication();
-  logger.info({ result }, 'after result');
-  return;
+  await apiClient.verifyAuthentication();
 }

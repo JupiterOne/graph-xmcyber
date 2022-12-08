@@ -28,10 +28,10 @@ describe('#validateInvocation', () => {
   /**
    * Testing a successful authorization can be done with recordings
    */
-  test.skip('successfully validates invocation', async () => {
+  test('successfully validates invocation', async () => {
     recording = setupProjectRecording({
       directory: __dirname,
-      name: 'fetch-entities',
+      name: 'fetch-entities-valid',
     });
 
     // Pass integrationConfig to authenticate with real credentials
@@ -57,7 +57,7 @@ describe('#validateInvocation', () => {
       test('should throw if apiKey is invalid', async () => {
         recording = setupProjectRecording({
           directory: __dirname,
-          name: 'fetch-entities',
+          name: 'fetch-entities-invalid',
           // Many authorization failures will return non-200 responses
           // and `recordFailedRequest: true` is needed to capture these responses
           options: {

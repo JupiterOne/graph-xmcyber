@@ -4,7 +4,7 @@ import {
   IntegrationInstanceConfigFieldMap,
   IntegrationInstanceConfig,
 } from '@jupiterone/integration-sdk-core';
-import { createAPIClient } from './client';
+import { createXMCyberClient } from './client';
 
 /**
  * A type describing the configuration fields required to execute the
@@ -48,6 +48,6 @@ export async function validateInvocation({
     throw new IntegrationValidationError('Config requires {apiKey}');
   }
 
-  const apiClient = createAPIClient(config, logger);
-  await apiClient.verifyAuthentication();
+  const XMCyberClient = createXMCyberClient(config, logger);
+  await XMCyberClient.verifyAuthentication();
 }

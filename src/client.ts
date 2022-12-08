@@ -1,5 +1,6 @@
 import fetch, { RequestInit, Response as NodeFetchResponse } from 'node-fetch';
 import { URLSearchParams } from 'url';
+import { sleep } from '@lifeomic/attempt';
 
 import {
   IntegrationError,
@@ -10,7 +11,12 @@ import {
 } from '@jupiterone/integration-sdk-core';
 
 import { IntegrationConfig } from './config';
-import { Method, XMCyberEntitiesResponse, XMCyberEntity } from './types';
+import {
+  Method,
+  RateLimitStatus,
+  XMCyberEntitiesResponse,
+  XMCyberEntity,
+} from './types';
 
 export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
 export interface XMCyberResponse<T> extends NodeFetchResponse {
@@ -22,17 +28,10 @@ export interface XMCyberResponse<T> extends NodeFetchResponse {
  */
 const ITEMS_PER_PAGE = 1000;
 
-/**
- * An APIClient maintains authentication state and provides an interface to
- * third party data APIs.
- *
- * It is recommended that integrations wrap provider data APIs to provide a
- * place to handle error responses and implement common patterns for iterating
- * resources.
- */
-export class APIClient {
+export class XMCyberClient {
   private readonly headers: RequestInit['headers'];
-  private BASE_URL = 'https://cyberrange.clients.xmcyber.com/api';
+  private readonly BASE_URL = 'https://cyberrange.clients.xmcyber.com/api';
+  private rateLimitStatus: RateLimitStatus;
 
   constructor(
     readonly config: IntegrationConfig,
@@ -46,16 +45,17 @@ export class APIClient {
     };
   }
 
-  // TODO: Missing to define and implement API Rate limit
   public async iterateEntities(iteratee: ResourceIteratee<XMCyberEntity>) {
-    let page = 1;
+    let page = 1,
+      currentPage = 1,
+      totalPages = 0;
 
     do {
       const response = await this.fetchEntities(page, ITEMS_PER_PAGE);
       const result = await response.json();
 
-      const totalPages = result.paging.totalPages;
-      const currentPage = Number(result.paging.page);
+      totalPages = result.paging.totalPages;
+      currentPage = Number(result.paging.page);
 
       if (Array.isArray(result.data)) {
         for (const resource of result.data) {
@@ -73,14 +73,13 @@ export class APIClient {
   }
 
   public async fetchEntities(page: number, pageSize: number) {
-    const entitiesPath = '/systemReport/entities';
     const searchParams = new URLSearchParams({
       page: String(page),
       pageSize: String(ITEMS_PER_PAGE),
       // TODO: Missing to define this filter.
       // 'entityTypeIds[]': 'agent',
     });
-    const endpoint = `${entitiesPath}?${searchParams.toString()}`;
+    const endpoint = `/systemReport/entities?${searchParams.toString()}`;
 
     return this.request<XMCyberEntitiesResponse>(endpoint, Method.GET);
   }
@@ -89,10 +88,7 @@ export class APIClient {
     // This endpoint will throw 401 when the request lacks valid authentication credentials
     const endpoint = '/status/systemHealth';
     try {
-      const response = await this.request<void>(endpoint, Method.GET);
-      if (!response.ok) {
-        throw new Error('Provider authentication failed');
-      }
+      await this.request<void>(endpoint, Method.GET);
     } catch (err) {
       throw new IntegrationProviderAuthenticationError({
         cause: err,
@@ -103,11 +99,57 @@ export class APIClient {
     }
   }
 
+  /**
+   * Pulls rate limit headers from response.
+   * Note: Check recordings to see rate limit headers.
+   * @param response
+   * @private
+   */
+  private setRateLimitStatus<T>(response: XMCyberResponse<T>) {
+    const limit = response.headers.get('X-RateLimit-Limit');
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const reset = response.headers.get('X-RateLimit-Reset');
+
+    if (limit && remaining && reset) {
+      this.rateLimitStatus = {
+        limit: Number(limit),
+        remaining: Number(remaining),
+        reset: Number(reset),
+      };
+    }
+
+    this.logger.info(this.rateLimitStatus, 'Rate limit status.');
+  }
+
+  /**
+   * Determines if approaching the rate limit, sleeps until rate limit has reset.
+   */
+  private async checkRateLimitStatus() {
+    if (this.rateLimitStatus) {
+      const rateLimitRemainingProportion =
+        this.rateLimitStatus.remaining / this.rateLimitStatus.limit;
+      const msUntilRateLimitReset = this.rateLimitStatus.reset - Date.now();
+
+      if (rateLimitRemainingProportion <= 0.1 && msUntilRateLimitReset > 0) {
+        this.logger.info(
+          {
+            rateLimitStatus: this.rateLimitStatus,
+            msUntilRateLimitReset,
+            rateLimitRemainingProportion,
+          },
+          `Reached rate limits, sleeping now.`,
+        );
+        await sleep(msUntilRateLimitReset);
+      }
+    }
+  }
+
   private async request<T>(
     endpoint: string,
     method: Method,
     body?: {},
   ): Promise<XMCyberResponse<T>> {
+    await this.checkRateLimitStatus();
     const requestOptions: RequestInit = {
       method,
       headers: this.headers,
@@ -139,15 +181,18 @@ export class APIClient {
         status: response.status,
         statusText: response.statusText,
       });
+    } else if (response.status === 200) {
+      // Rate limit headers are responded only in 200
+      this.setRateLimitStatus(response);
     }
 
     return response;
   }
 }
 
-export function createAPIClient(
+export function createXMCyberClient(
   config: IntegrationConfig,
   logger: IntegrationLogger,
-): APIClient {
-  return new APIClient(config, logger);
+): XMCyberClient {
+  return new XMCyberClient(config, logger);
 }

@@ -2,7 +2,7 @@ import {
   IntegrationStep,
   IntegrationStepExecutionContext,
 } from '@jupiterone/integration-sdk-core';
-import { createAPIClient } from '../../client';
+import { createXMCyberClient } from '../../client';
 
 import { IntegrationConfig } from '../../config';
 import { Steps, Entities } from '../constants';
@@ -15,7 +15,7 @@ export async function fetchEntities({
   jobState,
   logger,
 }: IntegrationStepExecutionContext<IntegrationConfig>) {
-  const client = createAPIClient(instance.config, logger);
+  const client = createXMCyberClient(instance.config, logger);
 
   await client.iterateEntities(async (entity) => {
     await jobState.addEntity(createEntityEntity(entity));

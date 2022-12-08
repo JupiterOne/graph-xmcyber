@@ -30,13 +30,13 @@ export interface XMCyberEntity {
   labels?: Label[];
 }
 
-export interface AttackedByTechnique {
+interface AttackedByTechnique {
   technique: string;
   displayName: string;
   count: number;
 }
 
-export interface AffectedEntities {
+interface AffectedEntities {
   max: Max;
   min: Min;
   avg: Avg;
@@ -44,7 +44,7 @@ export interface AffectedEntities {
   sum: Sum;
 }
 
-export interface AffectedAssets {
+interface AffectedAssets {
   max: Max;
   min: Min;
   avg: Avg;
@@ -52,35 +52,35 @@ export interface AffectedAssets {
   sum: Sum;
 }
 
-export interface Max {
+interface Max {
   value: number;
 }
 
-export interface Min {
+interface Min {
   value: number;
 }
 
-export interface Avg {
+interface Avg {
   value: number;
   score: number;
   level: string;
 }
 
-export interface Count {
+interface Count {
   value: number;
   score: number;
   level: string;
 }
 
-export interface AffectedUniqueAssets {
+interface AffectedUniqueAssets {
   count: Count;
 }
 
-export interface AffectedUniqueEntities {
+interface AffectedUniqueEntities {
   count: Count;
 }
 
-export interface AttackComplexity {
+interface AttackComplexity {
   max: Max;
   min: Min;
   avg: Avg;
@@ -88,12 +88,12 @@ export interface AttackComplexity {
   sum: Sum;
 }
 
-export interface Tag {
+interface Tag {
   key: string;
   value: string;
 }
 
-export interface Os {
+interface Os {
   type: string;
   version: Version;
   servicePack: ServicePack;
@@ -102,14 +102,14 @@ export interface Os {
   name: string;
 }
 
-export interface ServicePack {
+interface ServicePack {
   build: number;
   major: number;
   minor: number;
   patch: number;
 }
 
-export interface Paging {
+interface Paging {
   page: number;
   pageSize: number;
   total: number;
@@ -117,26 +117,32 @@ export interface Paging {
   nextLink: string;
 }
 
-export interface CompromisedRate {
+interface CompromisedRate {
   compromised: number;
   total: number;
   score: number;
   level: string;
 }
 
-export interface Sum {
+interface Sum {
   value: number;
 }
 
-export interface Version {
+interface Version {
   build: number;
   major: number;
   minor: number;
   patch: number;
 }
 
-export interface Label {
+interface Label {
   label: string;
+}
+
+export interface RateLimitStatus {
+  limit: number;
+  remaining: number;
+  reset: number;
 }
 
 export enum Method {

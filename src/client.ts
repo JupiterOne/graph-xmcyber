@@ -76,8 +76,6 @@ export class XMCyberClient {
     const searchParams = new URLSearchParams({
       page: String(page),
       pageSize: String(ITEMS_PER_PAGE),
-      // TODO: Missing to define this filter.
-      // 'entityTypeIds[]': 'agent',
     });
     const endpoint = `/systemReport/entities?${searchParams.toString()}`;
 

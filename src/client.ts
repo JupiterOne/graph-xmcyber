@@ -72,16 +72,6 @@ export class XMCyberClient {
     } while (page);
   }
 
-  public async fetchEntities(page: number, pageSize: number) {
-    const searchParams = new URLSearchParams({
-      page: page.toString(),
-      pageSize: ITEMS_PER_PAGE.toString(),
-    });
-    const endpoint = `/systemReport/entities?${searchParams.toString()}`;
-
-    return this.request<XMCyberEntitiesResponse>(endpoint, Method.GET);
-  }
-
   public async verifyAuthentication(): Promise<void> {
     // This endpoint will throw 401 when the request lacks valid authentication credentials
     const endpoint = '/status/systemHealth';
@@ -95,6 +85,16 @@ export class XMCyberClient {
         statusText: err.statusText,
       });
     }
+  }
+
+  private async fetchEntities(page: number, pageSize: number) {
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      pageSize: ITEMS_PER_PAGE.toString(),
+    });
+    const endpoint = `/systemReport/entities?${searchParams.toString()}`;
+
+    return this.request<XMCyberEntitiesResponse>(endpoint, Method.GET);
   }
 
   /**

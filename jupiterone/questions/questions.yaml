@@ -3,7 +3,7 @@ sourceId: managed:template
 integrationDefinitionId: '${integration_definition_id}'
 questions:
   - id: managed-question-what-xmcyber-entities-are-choke-points
-    title: What xmcyber entities are choke points?
+    title: What XM Cyber entities are choke points?
     description:
       Returns all XMCyber entities that are choke points.
     queries:
@@ -17,7 +17,7 @@ questions:
       - xmcyber
       - entities
   - id: managed-question-what-xmcyber-entities-are-critical-assets
-    title: What xmcyber entities are critical assets?
+    title: What XM Cyber entities are critical assets?
     description:
       Returns all XMCyber entities that are critical assets.
     queries:

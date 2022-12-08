@@ -46,7 +46,7 @@ export function createEntityEntity(entity: XMCyberEntity): Entity {
         osName: entity.os?.name,
         startingPoint: entity.startingPoint,
         startingPointOn: parseTimePropertyValue(entity.startingPointAt),
-        labels: JSON.stringify(entity.labels),
+        labels: entity.labels?.map(({ label }) => label),
         tags: JSON.stringify(entity.tags),
       },
     },

@@ -13,7 +13,7 @@ export const entitySpec: StepSpec<IntegrationConfig>[] = [
       {
         resourceName: 'Entity',
         _type: 'xmcyber_entity',
-        _class: ['Entity'],
+        _class: ['Record'],
       },
     ],
     relationships: [],

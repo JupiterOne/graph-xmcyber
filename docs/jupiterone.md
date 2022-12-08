@@ -97,7 +97,7 @@ The following entities are created:
 
 | Resources | Entity `_type`   | Entity `_class` |
 | --------- | ---------------- | --------------- |
-| Entity    | `xmcyber_entity` | `Entity`        |
+| Entity    | `xmcyber_entity` | `Record`        |
 
 <!--
 ********************************************************************************

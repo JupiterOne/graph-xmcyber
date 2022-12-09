@@ -1,6 +1,6 @@
 import fetch, { RequestInit, Response as NodeFetchResponse } from 'node-fetch';
 import { URLSearchParams } from 'url';
-import { sleep } from '@lifeomic/attempt';
+import { retry, sleep } from '@lifeomic/attempt';
 
 import {
   IntegrationError,
@@ -147,44 +147,70 @@ export class XMCyberClient {
     method: Method,
     body?: {},
   ): Promise<XMCyberResponse<T>> {
-    await this.checkRateLimitStatus();
-    const requestOptions: RequestInit = {
-      method,
-      headers: this.headers,
+    const requestAttempt = async () => {
+      await this.checkRateLimitStatus();
+      const requestOptions: RequestInit = {
+        method,
+        headers: this.headers,
+      };
+      if (body) {
+        requestOptions.body = JSON.stringify(body);
+      }
+
+      const response: XMCyberResponse<T> = (await fetch(
+        this.BASE_URL + endpoint,
+        requestOptions,
+      )) as XMCyberResponse<T>;
+
+      if (response.status === 401) {
+        throw new IntegrationProviderAuthenticationError({
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else if (response.status === 403) {
+        throw new IntegrationProviderAuthorizationError({
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else if (!response.ok) {
+        throw new IntegrationProviderAPIError({
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else if (response.status === 200) {
+        // Rate limit headers are responded only in 200
+        this.setRateLimitStatus(response);
+      }
+
+      return response;
     };
-    if (body) {
-      requestOptions.body = JSON.stringify(body);
-    }
 
-    const response: XMCyberResponse<T> = (await fetch(
-      this.BASE_URL + endpoint,
-      requestOptions,
-    )) as XMCyberResponse<T>;
+    return await retry(requestAttempt, {
+      maxAttempts: 3,
+      delay: 30_000,
+      timeout: 180_000,
+      factor: 2,
+      handleError: (error, attemptContext) => {
+        if ([401, 403, 404].includes(error.status)) {
+          attemptContext.abort();
+        }
 
-    if (response.status === 401) {
-      throw new IntegrationProviderAuthenticationError({
-        endpoint,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    } else if (response.status === 403) {
-      throw new IntegrationProviderAuthorizationError({
-        endpoint,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    } else if (!response.ok) {
-      throw new IntegrationProviderAPIError({
-        endpoint,
-        status: response.status,
-        statusText: response.statusText,
-      });
-    } else if (response.status === 200) {
-      // Rate limit headers are responded only in 200
-      this.setRateLimitStatus(response);
-    }
-
-    return response;
+        if (attemptContext.aborted) {
+          this.logger.warn(
+            { attemptContext, error, endpoint },
+            'Hit an unrecoverable error from API Provider. Aborting.',
+          );
+        } else {
+          this.logger.warn(
+            { attemptContext, error, endpoint },
+            `Hit a possibly recoverable error from API Provider. Waiting before trying again.`,
+          );
+        }
+      },
+    });
   }
 }
 

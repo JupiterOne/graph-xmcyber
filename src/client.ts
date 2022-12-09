@@ -28,12 +28,14 @@ export interface XMCyberResponse<T> extends NodeFetchResponse {
  */
 const ITEMS_PER_PAGE = 1000;
 
+let singleton: XMCyberClient;
+
 export class XMCyberClient {
   private readonly headers: RequestInit['headers'];
   private readonly BASE_URL = 'https://cyberrange.clients.xmcyber.com/api';
   private rateLimitStatus: RateLimitStatus;
 
-  constructor(
+  private constructor(
     readonly config: IntegrationConfig,
     readonly logger: IntegrationLogger,
   ) {
@@ -43,6 +45,15 @@ export class XMCyberClient {
       Accept: 'application/json',
       'X-Api-Key': apiKey,
     };
+  }
+
+  static getSingleton(config: IntegrationConfig, logger: IntegrationLogger) {
+    if (!singleton) {
+      logger.info('Creating new XMCyberClient instance');
+      singleton = new XMCyberClient(config, logger);
+    }
+    logger.info('Returning existing XMCyberClient instance');
+    return singleton;
   }
 
   public async iterateEntities(iteratee: ResourceIteratee<XMCyberEntity>) {
@@ -218,5 +229,5 @@ export function createXMCyberClient(
   config: IntegrationConfig,
   logger: IntegrationLogger,
 ): XMCyberClient {
-  return new XMCyberClient(config, logger);
+  return XMCyberClient.getSingleton(config, logger);
 }

@@ -1,15 +1,33 @@
 ---
 sourceId: managed:template
 integrationDefinitionId: '${integration_definition_id}'
-questions: []
-  # - id: integration-question-template-replace-me
-  #   title: What kinds of questions will this integration support?
-  #   description:
-  #     TODO Every integration should contribute questions! Please be carefule
-  #     to replace this before deploying the integration to JupiterOne.
-  #   queries:
-  #     - name: good
-  #       query: |
-  #         find * with _integrationDefinitionId = '${integration_definition_id}'
-  #   tags:
-  #     - template
+questions:
+  - id: managed-question-what-xmcyber-entities-are-choke-points
+    title: What XM Cyber entities are choke points?
+    description:
+      Returns all XMCyber entities that are choke points.
+    queries:
+      - name: XMCyber Choke Points
+        query: |
+          FIND xmcyber_entity 
+            WITH agentId != undefined 
+            AND affectedUniqueAssetsCount  > 0 as e 
+          ORDER BY e.affectedUniqueAssetsCount DESC
+    tags:
+      - xmcyber
+      - entities
+  - id: managed-question-what-xmcyber-entities-are-critical-assets
+    title: What XM Cyber entities are critical assets?
+    description:
+      Returns all XMCyber entities that are critical assets.
+    queries:
+      - name: XMCyber Critical Assets
+        query: |
+          FIND xmcyber_entity 
+            WITH agentId != undefined 
+            AND asset = true as e 
+          ORDER BY e.affectedUniqueEntitiesCount DESC
+    tags:
+      - xmcyber
+      - entities
+

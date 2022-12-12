@@ -1,25 +1,150 @@
-// Providers often supply types with their API libraries.
+export interface XMCyberEntitiesResponse {
+  paging: Paging;
+  data: XMCyberEntity[];
+}
 
-export interface AcmeUser {
-  id: string;
+export interface XMCyberEntity {
+  _id: string;
+  affectedAssets: AffectedAssets;
+  affectedEntities: AffectedEntities;
+  affectedUniqueAssets: AffectedUniqueAssets;
+  affectedUniqueEntities: AffectedUniqueEntities;
+  agentId?: string;
+  asset?: boolean;
+  assetAt?: string;
+  attackComplexity: AttackComplexity;
+  attackedByTechniques: AttackedByTechnique[];
+  color: string;
+  compromised: boolean;
+  compromisedRate: CompromisedRate;
+  discovered?: boolean;
+  discoveredAt?: string;
+  displayName: string;
+  entityId: string;
+  entityType: string;
+  name: string;
+  os?: Os;
+  startingPoint?: boolean;
+  startingPointAt?: string;
+  tags?: Tag[];
+  labels?: Label[];
+}
+
+interface AttackedByTechnique {
+  technique: string;
+  displayName: string;
+  count: number;
+}
+
+interface AffectedEntities {
+  max: Max;
+  min: Min;
+  avg: Avg;
+  count: Count;
+  sum: Sum;
+}
+
+interface AffectedAssets {
+  max: Max;
+  min: Min;
+  avg: Avg;
+  count: Count;
+  sum: Sum;
+}
+
+interface Max {
+  value: number;
+}
+
+interface Min {
+  value: number;
+}
+
+interface Avg {
+  value: number;
+  score: number;
+  level: string;
+}
+
+interface Count {
+  value: number;
+  score: number;
+  level: string;
+}
+
+interface AffectedUniqueAssets {
+  count: Count;
+}
+
+interface AffectedUniqueEntities {
+  count: Count;
+}
+
+interface AttackComplexity {
+  max: Max;
+  min: Min;
+  avg: Avg;
+  count: Count;
+  sum: Sum;
+}
+
+interface Tag {
+  key: string;
+  value: string;
+}
+
+interface Os {
+  type: string;
+  version: Version;
+  servicePack: ServicePack;
+  distributionName: string;
+  distributionVersion: string;
   name: string;
 }
 
-export interface AcmeGroup {
-  id: string;
-  name: string;
-  users?: Pick<AcmeUser, 'id'>[];
+interface ServicePack {
+  build: number;
+  major: number;
+  minor: number;
+  patch: number;
 }
 
-// Those can be useful to a degree, but often they're just full of optional
-// values. Understanding the response data may be more reliably accomplished by
-// reviewing the API response recordings produced by testing the wrapper client
-// (./client.ts). However, when there are no types provided, it is necessary to define
-// opaque types for each resource, to communicate the records that are expected
-// to come from an endpoint and are provided to iterating functions.
+interface Paging {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  nextLink: string;
+}
 
-/*
-import { Opaque } from 'type-fest';
-export type AcmeUser = Opaque<any, 'AcmeUser'>;
-export type AcmeGroup = Opaque<any, 'AcmeGroup'>;
-*/
+interface CompromisedRate {
+  compromised: number;
+  total: number;
+  score: number;
+  level: string;
+}
+
+interface Sum {
+  value: number;
+}
+
+interface Version {
+  build: number;
+  major: number;
+  minor: number;
+  patch: number;
+}
+
+interface Label {
+  label: string;
+}
+
+export interface RateLimitStatus {
+  limit: number;
+  remaining: number;
+  reset: number;
+}
+
+export enum Method {
+  GET = 'get',
+}

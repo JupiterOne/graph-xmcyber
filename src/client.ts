@@ -1,124 +1,234 @@
-import http from 'http';
+import fetch, { RequestInit, Response as NodeFetchResponse } from 'node-fetch';
+import { URLSearchParams } from 'url';
+import { retry, sleep } from '@lifeomic/attempt';
 
-import { IntegrationProviderAuthenticationError } from '@jupiterone/integration-sdk-core';
+import {
+  IntegrationError,
+  IntegrationLogger,
+  IntegrationProviderAPIError,
+  IntegrationProviderAuthenticationError,
+  IntegrationProviderAuthorizationError,
+} from '@jupiterone/integration-sdk-core';
 
 import { IntegrationConfig } from './config';
-import { AcmeUser, AcmeGroup } from './types';
+import {
+  Method,
+  RateLimitStatus,
+  XMCyberEntitiesResponse,
+  XMCyberEntity,
+} from './types';
 
 export type ResourceIteratee<T> = (each: T) => Promise<void> | void;
+export interface XMCyberResponse<T> extends NodeFetchResponse {
+  json(): Promise<T>;
+}
 
 /**
- * An APIClient maintains authentication state and provides an interface to
- * third party data APIs.
- *
- * It is recommended that integrations wrap provider data APIs to provide a
- * place to handle error responses and implement common patterns for iterating
- * resources.
+ * default: 100, max: 1000
  */
-export class APIClient {
-  constructor(readonly config: IntegrationConfig) {}
+const ITEMS_PER_PAGE = 1000;
+
+let singleton: XMCyberClient;
+
+export class XMCyberClient {
+  private readonly headers: RequestInit['headers'];
+  private readonly BASE_URL = 'https://cyberrange.clients.xmcyber.com/api';
+  private rateLimitStatus: RateLimitStatus;
+
+  private constructor(
+    readonly config: IntegrationConfig,
+    readonly logger: IntegrationLogger,
+  ) {
+    const { apiKey } = config;
+    this.headers = {
+      'Content-type': 'application/json',
+      Accept: 'application/json',
+      'X-Api-Key': apiKey,
+    };
+  }
+
+  static getSingleton(config: IntegrationConfig, logger: IntegrationLogger) {
+    if (!singleton) {
+      logger.info('Creating new XMCyberClient instance');
+      singleton = new XMCyberClient(config, logger);
+    } else {
+      logger.info('Returning existing XMCyberClient instance');
+    }
+    return singleton;
+  }
+
+  public async iterateEntities(iteratee: ResourceIteratee<XMCyberEntity>) {
+    let page = 1,
+      currentPage = 1,
+      totalPages = 0;
+
+    do {
+      const response = await this.fetchEntities(page, ITEMS_PER_PAGE);
+      const result = await response.json();
+
+      totalPages = result.paging.totalPages;
+      currentPage = Number(result.paging.page);
+
+      if (Array.isArray(result.data)) {
+        for (const resource of result.data) {
+          await iteratee(resource);
+        }
+      } else {
+        throw new IntegrationError({
+          code: 'UNEXPECTED_RESPONSE_DATA',
+          message: `Expected a collection of resources but type was ${typeof result}`,
+        });
+      }
+
+      page = totalPages > currentPage ? currentPage + 1 : 0; // 0 stops pagination
+    } while (page);
+  }
 
   public async verifyAuthentication(): Promise<void> {
-    // TODO make the most light-weight request possible to validate
-    // authentication works with the provided credentials, throw an err if
-    // authentication fails
-    const request = new Promise<void>((resolve, reject) => {
-      http.get(
-        {
-          hostname: 'localhost',
-          port: 443,
-          path: '/api/v1/some/endpoint?limit=1',
-          agent: false,
-          timeout: 10,
-        },
-        (res) => {
-          if (res.statusCode !== 200) {
-            reject(new Error('Provider authentication failed'));
-          } else {
-            resolve();
-          }
-        },
-      );
-    });
-
+    // This endpoint will throw 401 when the request lacks valid authentication credentials
+    const endpoint = '/status/systemHealth';
     try {
-      await request;
+      await this.request<void>(endpoint, Method.GET);
     } catch (err) {
       throw new IntegrationProviderAuthenticationError({
         cause: err,
-        endpoint: 'https://localhost/api/v1/some/endpoint?limit=1',
+        endpoint: this.BASE_URL + endpoint,
         status: err.status,
         statusText: err.statusText,
       });
     }
   }
 
-  /**
-   * Iterates each user resource in the provider.
-   *
-   * @param iteratee receives each resource to produce entities/relationships
-   */
-  public async iterateUsers(
-    iteratee: ResourceIteratee<AcmeUser>,
-  ): Promise<void> {
-    // TODO paginate an endpoint, invoke the iteratee with each record in the
-    // page
-    //
-    // The provider API will hopefully support pagination. Functions like this
-    // should maintain pagination state, and for each page, for each record in
-    // the page, invoke the `ResourceIteratee`. This will encourage a pattern
-    // where each resource is processed and dropped from memory.
+  private async fetchEntities(page: number, pageSize: number) {
+    const searchParams = new URLSearchParams({
+      page: page.toString(),
+      pageSize: ITEMS_PER_PAGE.toString(),
+    });
+    const endpoint = `/systemReport/entities?${searchParams.toString()}`;
 
-    const users: AcmeUser[] = [
-      {
-        id: 'acme-user-1',
-        name: 'User One',
-      },
-      {
-        id: 'acme-user-2',
-        name: 'User Two',
-      },
-    ];
-
-    for (const user of users) {
-      await iteratee(user);
-    }
+    return this.request<XMCyberEntitiesResponse>(endpoint, Method.GET);
   }
 
   /**
-   * Iterates each group resource in the provider.
-   *
-   * @param iteratee receives each resource to produce entities/relationships
+   * Pulls rate limit headers from response.
+   * Note: Check recordings to see rate limit headers.
+   * @param response
+   * @private
    */
-  public async iterateGroups(
-    iteratee: ResourceIteratee<AcmeGroup>,
-  ): Promise<void> {
-    // TODO paginate an endpoint, invoke the iteratee with each record in the
-    // page
-    //
-    // The provider API will hopefully support pagination. Functions like this
-    // should maintain pagination state, and for each page, for each record in
-    // the page, invoke the `ResourceIteratee`. This will encourage a pattern
-    // where each resource is processed and dropped from memory.
+  private setRateLimitStatus<T>(response: XMCyberResponse<T>) {
+    const limit = response.headers.get('X-RateLimit-Limit');
+    const remaining = response.headers.get('X-RateLimit-Remaining');
+    const reset = response.headers.get('X-RateLimit-Reset');
 
-    const groups: AcmeGroup[] = [
-      {
-        id: 'acme-group-1',
-        name: 'Group One',
-        users: [
-          {
-            id: 'acme-user-1',
-          },
-        ],
-      },
-    ];
-
-    for (const group of groups) {
-      await iteratee(group);
+    if (limit && remaining && reset) {
+      this.rateLimitStatus = {
+        limit: Number(limit),
+        remaining: Number(remaining),
+        reset: Number(reset),
+      };
     }
+
+    this.logger.info(this.rateLimitStatus, 'Rate limit status.');
+  }
+
+  /**
+   * Determines if approaching the rate limit, sleeps until rate limit has reset.
+   */
+  private async checkRateLimitStatus() {
+    if (this.rateLimitStatus) {
+      const rateLimitRemainingProportion =
+        this.rateLimitStatus.remaining / this.rateLimitStatus.limit;
+      const msUntilRateLimitReset = this.rateLimitStatus.reset - Date.now();
+
+      if (rateLimitRemainingProportion <= 0.1 && msUntilRateLimitReset > 0) {
+        this.logger.info(
+          {
+            rateLimitStatus: this.rateLimitStatus,
+            msUntilRateLimitReset,
+            rateLimitRemainingProportion,
+          },
+          `Reached rate limits, sleeping now.`,
+        );
+        await sleep(msUntilRateLimitReset);
+      }
+    }
+  }
+
+  private async request<T>(
+    endpoint: string,
+    method: Method,
+    body?: {},
+  ): Promise<XMCyberResponse<T>> {
+    const requestAttempt = async () => {
+      await this.checkRateLimitStatus();
+      const requestOptions: RequestInit = {
+        method,
+        headers: this.headers,
+      };
+      if (body) {
+        requestOptions.body = JSON.stringify(body);
+      }
+
+      const response: XMCyberResponse<T> = (await fetch(
+        this.BASE_URL + endpoint,
+        requestOptions,
+      )) as XMCyberResponse<T>;
+
+      if (response.status === 401) {
+        throw new IntegrationProviderAuthenticationError({
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else if (response.status === 403) {
+        throw new IntegrationProviderAuthorizationError({
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else if (!response.ok) {
+        throw new IntegrationProviderAPIError({
+          endpoint,
+          status: response.status,
+          statusText: response.statusText,
+        });
+      } else if (response.status === 200) {
+        // Rate limit headers are responded only in 200
+        this.setRateLimitStatus(response);
+      }
+
+      return response;
+    };
+
+    return await retry(requestAttempt, {
+      maxAttempts: 3,
+      delay: 30_000,
+      timeout: 180_000,
+      factor: 2,
+      handleError: (error, attemptContext) => {
+        if ([401, 403, 404].includes(error.status)) {
+          attemptContext.abort();
+        }
+
+        if (attemptContext.aborted) {
+          this.logger.warn(
+            { attemptContext, error, endpoint },
+            'Hit an unrecoverable error from API Provider. Aborting.',
+          );
+        } else {
+          this.logger.warn(
+            { attemptContext, error, endpoint },
+            `Hit a possibly recoverable error from API Provider. Waiting before trying again.`,
+          );
+        }
+      },
+    });
   }
 }
 
-export function createAPIClient(config: IntegrationConfig): APIClient {
-  return new APIClient(config);
+export function createXMCyberClient(
+  config: IntegrationConfig,
+  logger: IntegrationLogger,
+): XMCyberClient {
+  return XMCyberClient.getSingleton(config, logger);
 }

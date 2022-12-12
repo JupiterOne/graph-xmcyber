@@ -7,3 +7,11 @@ and this project adheres to
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+
+## [1.0.0] - 2022-12-08
+
+### Added
+
+- Add basic integration for XMCyber that handle auth verification, paginated
+  requests and rate limit
+- Ingest new entity `xmcyber_entity`

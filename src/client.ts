@@ -51,8 +51,9 @@ export class XMCyberClient {
     if (!singleton) {
       logger.info('Creating new XMCyberClient instance');
       singleton = new XMCyberClient(config, logger);
+    } else {
+      logger.info('Returning existing XMCyberClient instance');
     }
-    logger.info('Returning existing XMCyberClient instance');
     return singleton;
   }
 

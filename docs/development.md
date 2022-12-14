@@ -1,28 +1,25 @@
 # Development
 
-Add details here to give a brief overview of how to work with the provider APIs.
-Please reference any SDKs or API docs used to help build the integration here.
+This integration focuses on [XM Cyber](https://www.xmcyber.com/) and is using
+[XM Cyber API](https://cyberrange.clients.xmcyber.com/static/documentation/) for
+interacting with the XM Cyber platform.
 
 ## Prerequisites
 
-Supply details about software or tooling (like maybe Docker or Terraform) that
-is needed for development here.
-
-Please supply references to documentation that details how to install those
-dependencies here.
-
-Tools like Node.js and NPM are already covered in the [README](../README.md) so
-don't bother documenting that here.
+- Active API Key in XM Cyber is required.
+- Active User in XM Cyber is optional.
 
 ## Provider account setup
 
-Please provide information about the steps needed to create an account with a
-provider. Images and references to a provider's documentation is very helpful
-for new developers picking up your work.
+- Request a API Key with **READ** permissions to XM Cyber.
+- (Optional) Request a user to XM Cyber to be able to view the API Documentation
 
 ## Authentication
 
-Supply details here for information on how to authenticate with a provider so
-that developers have an idea of what's needed to hit APIs. It may be useful to
-provide explanations for each value specified in the
-[`IntegrationInstanceConfigFieldMap`](../src/config.ts).
+- Provide the API Key as API_KEY in the `.env`. You can use
+  [.env.example](../.env.example) as reference.
+- (Optional) Navigate to
+  [XM Cyber Login Page](https://cyberrange.clients.xmcyber.com/#/login), enter
+  username and password and then navigate to
+  [XM Cyber API Documentation](https://cyberrange.clients.xmcyber.com/static/documentation/)
+  to view the documentation.

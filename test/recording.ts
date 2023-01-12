@@ -23,7 +23,7 @@ export function setupProjectRecording(
   });
 }
 
-function setRedactedValue(
+function addNestedRedactedValue(
   obj: Record<string, unknown>,
   keys: string[],
   i: number,
@@ -42,7 +42,11 @@ function setRedactedValue(
     [key]:
       typeof obj[key] === 'string'
         ? DEFAULT_REDACT
-        : setRedactedValue(obj[key] as Record<string, unknown>, keys, i + 1),
+        : addNestedRedactedValue(
+            obj[key] as Record<string, unknown>,
+            keys,
+            i + 1,
+          ),
   };
 }
 
@@ -71,7 +75,7 @@ function redact(entry: RecordingEntry): void {
 
       keysToRedact.forEach((key) => {
         const objKeys = key.split('.');
-        parsedResponseText.data[i] = setRedactedValue(
+        parsedResponseText.data[i] = addNestedRedactedValue(
           parsedResponseText.data[i],
           objKeys,
           0,

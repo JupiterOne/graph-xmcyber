@@ -16,7 +16,7 @@ and this project adheres to
   requests and rate limit
 - Ingest new entity `xmcyber_entity`
 
-## [1.1.0] - 2023-01-11
+## [1.1.0] - 2023-01-12
 
 ### Added
 

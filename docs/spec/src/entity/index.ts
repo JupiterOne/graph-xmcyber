@@ -1,4 +1,4 @@
-import { StepSpec } from '@jupiterone/integration-sdk-core';
+import { RelationshipClass, StepSpec } from '@jupiterone/integration-sdk-core';
 import { IntegrationConfig } from '../../../../src/config';
 
 export const entitySpec: StepSpec<IntegrationConfig>[] = [
@@ -16,8 +16,15 @@ export const entitySpec: StepSpec<IntegrationConfig>[] = [
         _class: ['Record'],
       },
     ],
-    relationships: [],
-    dependsOn: [],
+    relationships: [
+      {
+        _class: RelationshipClass.HAS,
+        _type: 'xmcyber_account_has_entity',
+        sourceType: 'xmcyber_account',
+        targetType: 'xmcyber_entity',
+      },
+    ],
+    dependsOn: ['fetch-account'],
     implemented: true,
   },
 ];

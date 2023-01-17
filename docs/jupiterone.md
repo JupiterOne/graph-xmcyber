@@ -71,9 +71,18 @@ https://github.com/JupiterOne/sdk/blob/main/docs/integrations/development.md
 
 The following entities are created:
 
-| Resources | Entity `_type`   | Entity `_class` |
-| --------- | ---------------- | --------------- |
-| Entity    | `xmcyber_entity` | `Record`        |
+| Resources | Entity `_type`    | Entity `_class` |
+| --------- | ----------------- | --------------- |
+| Account   | `xmcyber_account` | `Account`       |
+| Entity    | `xmcyber_entity`  | `Record`        |
+
+### Relationships
+
+The following relationships are created:
+
+| Source Entity `_type` | Relationship `_class` | Target Entity `_type` |
+| --------------------- | --------------------- | --------------------- |
+| `xmcyber_account`     | **HAS**               | `xmcyber_entity`      |
 
 <!--
 ********************************************************************************

@@ -22,3 +22,10 @@ and this project adheres to
 
 - Ingest new entity `xmcyber_account`
 - Added relationship `xmcyber_account_has_entity`
+
+## [1.2.0] - 2023-01-13
+
+### Added
+
+- Add new github action to automate the deployment of the released version in
+  the integration-deployments repo.
